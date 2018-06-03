@@ -123,9 +123,9 @@ if [ "$Available" = "" ]; then
 	fi
 
 	echo "
-	$Website $HTTP_Listen $HTTP_Backend $Cache $Security no no
-	$Website $HTTPS_Listen $HTTPS_Backend $Cache $Security /vddos/ssl/$Website.pri /vddos/ssl/$Website.crt
-	" >> /vddos/conf.d/website.conf
+$Website $HTTP_Listen $HTTP_Backend $Cache $Security no no
+$Website $HTTPS_Listen $HTTPS_Backend $Cache $Security /vddos/ssl/$Website.pri /vddos/ssl/$Website.crt
+" >> /vddos/conf.d/website.conf
 
 	echo '+ New-Success: '$Website' auto add to /vddos/conf.d/website.conf ===> Done!'|tee -a /vddos/auto-add/log.txt
 	sleep 1
