@@ -115,6 +115,11 @@ if [ "$Available" = "" ]; then
 			ln -s /letsencrypt/$Website.crt /vddos/ssl/$Website.crt 
 			ln -s /letsencrypt/$Website.pri /vddos/ssl/$Website.pri 
 		fi
+
+		if [ ! -f /vddos/ssl/$Website.crt ] && [ -f /root/.acme.sh/"$Website"_ecc/fullchain.cer ]; then
+			ln -s /root/.acme.sh/"$Website"_ecc/fullchain.cer /vddos/ssl/$Website.crt 
+			ln -s /root/.acme.sh/"$Website"_ecc/"$Website".key /vddos/ssl/$Website.pri
+		fi
 	fi
 
 	if [ "$randomchecknonwww" != "$random" ] || [ ! -f /vddos/ssl/"$Website".crt ]; then
@@ -148,6 +153,16 @@ if [ "$Available" = "" ]; then
 		if [ -f /letsencrypt/www."$Website".crt ]; then
 			ln -s /letsencrypt/www.$Website.crt /vddos/ssl/www.$Website.crt 
 			ln -s /letsencrypt/www.$Website.pri /vddos/ssl/www.$Website.pri 
+		fi
+
+		if [ ! -f /vddos/ssl/www."$Website".crt ] && [ -f /root/.acme.sh/www."$Website"_ecc/fullchain.cer ]; then
+			ln -s /root/.acme.sh/www."$Website"_ecc/fullchain.cer /vddos/ssl/www.$Website.crt 
+			ln -s /root/.acme.sh/www."$Website"_ecc/"$Website".key /vddos/ssl/www.$Website.pri
+		fi
+
+		if [ ! -f /vddos/ssl/"$Website".crt ]; then
+			ln -s /vddos/ssl/$Website.crt /vddos/ssl/www.$Website.crt 
+			ln -s /vddos/ssl/$Website.pri /vddos/ssl/www.$Website.pri
 		fi
 
 echo "
