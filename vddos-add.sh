@@ -160,7 +160,7 @@ if [ "$Available" = "" ]; then
 			ln -s /root/.acme.sh/www."$Website"_ecc/"$Website".key /vddos/ssl/www.$Website.pri
 		fi
 
-		if [ ! -f /vddos/ssl/"$Website".crt ]; then
+		if [ ! -f /vddos/ssl/www."$Website".crt ]; then
 			ln -s /vddos/ssl/$Website.crt /vddos/ssl/www.$Website.crt 
 			ln -s /vddos/ssl/$Website.pri /vddos/ssl/www.$Website.pri
 		fi
