@@ -179,7 +179,7 @@ if [ "$Command" = "list" ]; then
 			echo '- Re-check: '$Website' is already in /vddos/conf.d/website.conf ===> Skip!'|tee -a /vddos/auto-add/log.txt
 		fi
 		if [ "$Available" = "" ]; then
-			echo ' Found '$Website' in '$listdomains_source':'|tee -a /vddos/auto-add/log.txt
+			echo ' Found '$Website' ['$dong'/'$numberlinelistdomains'] in '$listdomains_source':'|tee -a /vddos/auto-add/log.txt
 			/usr/bin/vddos-add "$Website" 
 		fi
 		dong=$((dong + 1))
