@@ -296,7 +296,7 @@ if [ "$Command" = "panel" ]; then
 
 
 
-	if [ "$hostingpanel" != "vestacp" ] && [ "$hostingpanel" != "plesk" ] && [ "$hostingpanel" != "cpanel" ] && [ "$hostingpanel" != "cyberpanel" ] && [ "$hostingpanel" != "directadmin" ] && [ "$hostingpanel" != "cwp" ]; then
+	if [ "$hostingpanel" != "vestacp" ] && [ "$hostingpanel" != "plesk" ] && [ "$hostingpanel" != "cpanel" ] && [ "$hostingpanel" != "cyberpanel" ] && [ "$hostingpanel" != "directadmin" ] && [ "$hostingpanel" != "cwp" ] && [ "$hostingpanel" != "kloxo-mr" ]  && [ "$hostingpanel" != "sentora" ] && [ "$hostingpanel" != "virtualmin" ] && [ "$hostingpanel" != "webuzo" ] && [ "$hostingpanel" != "aapanel" ]; then
 	showerror
 	exit 0
 	fi
