@@ -32,7 +32,11 @@
 # vddos-autoadd [panel] [kloxo-mr] [apache/nginx]
 # vddos-autoadd [panel] [sentora] [apache]
 
+# Auto remove a domain:
+# vddos-autoadd [remove] your-domain.com
 
+# Auto recheck/renew ssl again for all domains:
+# vddos-autoadd [ssl-again]
 
 #################################################################################
 
@@ -87,7 +91,11 @@ Please enter the correct syntax for the command: ['$Command'] ...
  vddos-autoadd [panel] [kloxo-mr] [apache/nginx]
  vddos-autoadd [panel] [sentora] [apache]
 
+# Auto remove a domain:
+ vddos-autoadd [remove] your-domain.com
 
+# Auto recheck/renew ssl again for all domains:
+ vddos-autoadd [ssl-again]
 
 '|tee -a /vddos/auto-add/log.txt
 return 0
@@ -101,12 +109,17 @@ return 0
 }
 
 
-if [ "$1" = "" ] || [ "$2" = "" ]; then
+if [ "$1" = "" ]; then
 showerror
 exit 0
 fi	
 
-if [ "$Command" != "domain" ] && [ "$Command" != "list" ] && [ "$Command" = "http" ] && [ "$Command" = "panel" ] && [ "$Command" = "webserver" ];  then
+if [ "$1" != "ssl-again" ] && [ "$2" = "" ]; then
+showerror
+exit 0
+fi	
+
+if [ "$Command" != "domain" ] && [ "$Command" != "list" ] && [ "$Command" != "http" ] && [ "$Command" != "panel" ] && [ "$Command" != "webserver" ] && [ "$Command" != "remove" ] && [ "$Command" != 'ssl-again' ];  then
 showerror
 exit 0
 
@@ -133,7 +146,7 @@ if [ "$Command" = "domain" ]; then
 
 	md5sum_website_conf_new=`md5sum /vddos/conf.d/website.conf| awk 'NR==1 {print $1}'`
 	if [ "$md5sum_website_conf_latest" != "$md5sum_website_conf_new" ]; then
-		/usr/bin/vddos restart |tee -a /vddos/auto-add/log.txt
+		/usr/bin/vddos reload |tee -a /vddos/auto-add/log.txt
 	fi
 fi
 
@@ -187,7 +200,7 @@ if [ "$Command" = "list" ]; then
 	fi
 	md5sum_website_conf_new=`cat /vddos/conf.d/website.conf| grep . | awk '!x[$0]++'| md5sum | awk 'NR==1 {print $1}'`
 	if [ "$md5sum_website_conf_latest" != "$md5sum_website_conf_new" ]; then
-		/usr/bin/vddos restart |tee -a /vddos/auto-add/log.txt
+		/usr/bin/vddos reload |tee -a /vddos/auto-add/log.txt
 	fi
 	checklog
 	exit 0
@@ -831,10 +844,118 @@ fi
 
 
 
+#################################################################################
+# Auto remove a domain:
+# vddos-autoadd [remove] your-domain.com
+
+if [ "$Command" = "remove" ]; then
+
+	md5sum_website_conf_latest=`md5sum /vddos/conf.d/website.conf| awk 'NR==1 {print $1}'`
+	
+	Website="$2"
+	Available=`awk -F: "/^$Website/" /vddos/conf.d/website.conf`
+	if [ "$Available" = "" ]; then
+		echo '- Remove-check: '$Website' is not available in /vddos/conf.d/website.conf ===> Skip!'|tee -a /vddos/auto-add/log.txt
+		exit 0
+	fi
+	if [ "$Available" != "" ]; then
+		sed -i "/^$Website.*/d" /vddos/conf.d/website.conf
+		echo '+ Remove-Success: '$Website' auto remove from /vddos/conf.d/website.conf ===> Done!'|tee -a /vddos/auto-add/log.txt
+	fi
+	md5sum_website_conf_new=`md5sum /vddos/conf.d/website.conf| awk 'NR==1 {print $1}'`
+	if [ "$md5sum_website_conf_latest" != "$md5sum_website_conf_new" ]; then
+		/usr/bin/vddos reload |tee -a /vddos/auto-add/log.txt
+	fi
+fi
 
 
+#############################################################################
+# Auto recheck/renew ssl again for all domains:
+# vddos-autoadd [ssl-again]
 
+if [ "$Command" = 'ssl-again' ]; then
+	listdomains_source="/vddos/conf.d/website.conf"
+	listdomains="/vddos/auto-add/ssl-again/listdomains.txt"
+	if [ ! -f $listdomains_source ]; then
+		showerror
+		echo ''$listdomains_source' not found!'
+		exit 0
+	fi
 
+	if [ ! -d /vddos/auto-add/ssl-again/ ]; then
+		mkdir -p /vddos/auto-add/ssl-again/
+	fi
+		
+	md5sum_ssl_conf_latest=`ls -lah /vddos/ssl|md5sum | awk 'NR==1 {print $1}'`
+
+	echo "
+		[[[[[[[ `date` ]]]]]]]
+	" > /vddos/auto-add/log.txt
+	cat /vddos/conf.d/website.conf| grep .| grep "https" |grep "/vddos/ssl" | awk '{print $1}'| awk '!x[$0]++'|grep -v '^#'|grep -v '^*'|grep -v '^default'| awk '!x[$0]++' > $listdomains
+	numberlinelistdomains=`cat $listdomains | grep . | wc -l`
+	startlinenumber=1
+
+	dong=$startlinenumber
+	while [ $dong -le $numberlinelistdomains ]
+	do
+		Website=$(awk " NR == $dong " $listdomains); echo $Website
+
+		if [ ! -f /vddos/ssl/"$Website".crt ] || [ ! -f /vddos/ssl/"$Website".pri ]; then
+			echo '- SSL-check: '$Website' does not use Auto-SSL of vDDoS ===> Skip!'|tee -a /vddos/auto-add/log.txt
+		fi
+
+		if [ -f /vddos/ssl/"$Website".crt ] && [ -f /vddos/ssl/"$Website".pri ]; then
+			if [ -f /letsencrypt/$Website.crt ] && [ -f /letsencrypt/$Website.pri ]; then
+			echo '- SSL-check: '$Website' is already using Auto-SSL Certificates of vDDoS ===> Skip!'|tee -a /vddos/auto-add/log.txt
+			fi
+
+			if [ ! -f /letsencrypt/$Website.crt ] || [ ! -f /letsencrypt/$Website.pri ]; then
+				echo '- Found: '$Website' is still using Self-signed Certificates ===> Re-request SSL-again!'|tee -a /vddos/auto-add/log.txt
+
+				random=`cat /dev/urandom | tr -cd 'A-Z0-9' | head -c 5`
+				echo $random > /vddos/letsencrypt/.well-known/acme-challenge/$Website.txt
+				randomchecknonwww=`curl -s -L http://$Website/.well-known/acme-challenge/$Website.txt`
+
+				rm -f /vddos/letsencrypt/.well-known/acme-challenge/$Website.txt
+				if [ "$randomchecknonwww" = "$random" ]; then
+					mkdir -p /letsencrypt/
+					/root/.acme.sh/acme.sh --issue -d $Website -w /vddos/letsencrypt --keylength ec-256 --key-file /letsencrypt/$Website.pri --fullchain-file /letsencrypt/$Website.crt  >>/vddos/auto-add/log.txt 2>&1
+					if [ -f /letsencrypt/"$Website".crt ]; then
+						rm -rf /vddos/ssl/"$Website".crt
+						rm -rf /vddos/ssl/"$Website".pri
+						ln -s /letsencrypt/$Website.crt /vddos/ssl/$Website.crt 
+						ln -s /letsencrypt/$Website.pri /vddos/ssl/$Website.pri 
+					fi
+
+					if [ ! -f /vddos/ssl/$Website.crt ] && [ -f /root/.acme.sh/"$Website"_ecc/fullchain.cer ]; then
+						rm -rf /vddos/ssl/"$Website".crt
+						rm -rf /vddos/ssl/"$Website".pri
+						ln -s /root/.acme.sh/"$Website"_ecc/fullchain.cer /vddos/ssl/$Website.crt 
+						ln -s /root/.acme.sh/"$Website"_ecc/"$Website".key /vddos/ssl/$Website.pri
+					fi
+				fi
+
+				if [ "$randomchecknonwww" != "$random" ] || [ ! -f /vddos/ssl/"$Website".crt ]; then
+					openssl req -x509 -nodes -days 3650 -newkey rsa:2048 -keyout /vddos/ssl/$Website.pri -out /vddos/ssl/$Website.crt -subj "/C=US/ST=$Website/L=$Website/O=$Website/OU=vddos.voduy.com/CN=$Website" >>/vddos/auto-add/log.txt 2>&1
+					chmod -R 750 /vddos/ssl/$Website.*
+					echo '+ New-Success: '$Website' is still using self-certificate ===> Unable Re-request SSL-again!'|tee -a /vddos/auto-add/log.txt
+				fi
+
+				if [ -f /vddos/ssl/$Website.crt ] && [ -f /root/.acme.sh/"$Website"_ecc/fullchain.cer ]; then
+					echo '+ New-Success: '$Website' Re-request SSL-again ===> Done!'|tee -a /vddos/auto-add/log.txt
+				fi
+			fi
+		fi
+		dong=$((dong + 1))
+	done
+
+	md5sum_ssl_conf_new=`ls -lah /vddos/ssl|md5sum | awk 'NR==1 {print $1}'`
+	if [ "$md5sum_ssl_conf_latest" != "$md5sum_ssl_conf_new" ]; then
+		/usr/bin/vddos reload |tee -a /vddos/auto-add/log.txt
+	fi
+	checklog
+	exit 0
+fi
 
 
 
